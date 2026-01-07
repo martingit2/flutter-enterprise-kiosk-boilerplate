@@ -1,14 +1,15 @@
-# 🐹 Taskhamster Enterprise Kiosk – Architecture & Context Brief
+# 📱 Enterprise Kiosk Solution – Architecture & Context Brief
 
-**Prosjekt:** Taskhamster Kiosk System  
+**Prosjekt:** Enterprise Kiosk System for Flutter  
 **Versjon:** 1.0.0 (POC - Proof of Concept)  
 **Plattform:** Android (Samsung Galaxy Tab) / iOS (iPad)  
-**Teknologi:** Flutter (Dart) + Native Android (Kotlin)
+**Teknologi:** Flutter (Dart) + Native Android (Kotlin)  
+**Utvikler:** Martin ([@martingit2](https://github.com/martingit2))
 
 ---
 
 ## 1. Sammendrag (Executive Summary)
-Taskhamster er en **Enterprise Kiosk-applikasjon** utviklet for å gamifisere fellesoppgaver på arbeidsplassen. Appen kjøres på dedikerte nettbrett montert i fellesområder.
+Dette er en **Enterprise Kiosk-applikasjon** utviklet for bruk på dedikerte nettbrett montert i fellesområder. Løsningen kan tilpasses ulike formål som oppgavehåndtering, registrering, informasjonsskjermer eller selvbetjeningsportaler.
 
 Systemet er bygget for å være **"Always-On"** (alltid på), sikkert låst til enheten, og strømbesparende uten å slå av skjermen. Løsningen demonstrerer hvordan moderne hybridteknologi (Flutter) kan kombineres med lavnivå systemstyring (Native Android) for å møte strenge bedriftskrav.
 
@@ -31,7 +32,7 @@ For å hindre innbrenning og spare strøm, men beholde synlighet:
 
 ### 🛡️ Admin Gatekeeper ("Secret Handshake")
 Administrasjonstilgang er usynlig for vanlige brukere:
-*   **Trigger:** 5 raske trykk på Taskhamster-logoen (øverst til venstre).
+*   **Trigger:** 5 raske trykk på app-logoen (øverst til venstre).
 *   **Sikkerhet:** Krever PIN-kode (Standard: `1234`) for å låse opp enheten og avslutte appen.
 
 ---
@@ -59,7 +60,7 @@ lib/
 ### Native Integrasjon (Android / Kotlin)
 **Fil:** `android/app/src/main/kotlin/.../MainActivity.kt`
 
-Vi bruker en MethodChannel (`com.taskhamster.kiosk/control`) for å kalle funksjoner som Flutter ikke har tilgang til alene:
+Vi bruker en MethodChannel (`com.yourcompany.kiosk/control`) for å kalle funksjoner som Flutter ikke har tilgang til alene:
 - `startLockTask()`: Låser appen til skjermen.
 - `stopLockTask()`: Frigjør appen.
 
@@ -70,7 +71,7 @@ Alle innstillinger styres fra `lib/config/theme.dart`. Dette gjør det enkelt å
 
 ```dart
 class AppConfig {
-  static const String appTitle = 'Taskhamster Hub';
+  static const String appTitle = 'Enterprise Kiosk';
   static const String adminPin = '1234'; 
   
   // Hvor lenge skal den stå før den dimmer?
@@ -101,10 +102,10 @@ For at appen skal kunne låse skjermen uten spørsmål, må den settes som Devic
 3. Kjør følgende kommando i terminalen:
 
 ```bash
-adb shell dpm set-device-owner no.taskhamster.taskhamster/.MainActivity
+adb shell dpm set-device-owner com.yourcompany.kioskapp/.MainActivity
 ```
 
-*(Merk: Hvis du endrer applicationId, må kommandoen oppdateres tilsvarende).*
+*(Merk: Erstatt `com.yourcompany.kioskapp` med ditt eget applicationId fra `build.gradle`).*
 
 ### Hvordan demonstrere appen
 1. **Start:** Appen laster inn og låser seg umiddelbart.
@@ -124,4 +125,4 @@ Dette er en Proof of Concept (POC). Følgende steg kreves for produksjon:
 
 ---
 
-*Dokumentasjon utarbeidet av Taskhamster Development Team.*
+*Dokumentasjon utarbeidet av Martin ([@martingit2](https://github.com/martingit2))*
