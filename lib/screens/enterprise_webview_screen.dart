@@ -7,8 +7,6 @@ import '../config/environment.dart';
 import '../config/app_config.dart';
 import '../widgets/admin_pin_dialog.dart';
 
-/// WebView Screen for app.taskhamster.no
-/// MED 5-KLIKK LOGO OVERLAY FOR ADMIN UNLOCK
 class EnterpriseWebViewScreen extends StatefulWidget {
   const EnterpriseWebViewScreen({super.key});
 
@@ -25,7 +23,6 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
   bool _isOffline = false;
   String? _errorMessage;
 
-  // Logo-klikk for admin unlock
   int _logoTaps = 0;
   Timer? _tapResetTimer;
 
@@ -57,7 +54,6 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
         ..setBackgroundColor(Colors.white)
         ..setNavigationDelegate(_buildNavigationDelegate());
 
-      // Android-specific settings
       if (_controller.platform is AndroidWebViewController) {
         final androidController = _controller.platform as AndroidWebViewController;
         androidController.setMediaPlaybackRequiresUserGesture(false);
@@ -199,10 +195,6 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
     }
   }
 
-  // ============================================================================
-  // LOGO KLIKK HANDLER (samme som før)
-  // ============================================================================
-
   void _handleLogoTap() {
     _logoTaps++;
     debugPrint('🖱️ Logo tap: $_logoTaps/5');
@@ -231,7 +223,6 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
 
     if (unlocked) {
       debugPrint('✅ Device unlocked successfully');
-      // Unlock is handled in the dialog
     } else {
       debugPrint('⚠️ Unlock cancelled or failed');
     }
@@ -243,17 +234,13 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // WebView
             if (!_connectionError && !_isOffline)
               WebViewWidget(controller: _controller),
 
-            // Offline UI
             if (_isOffline) _buildOfflineUI(),
 
-            // Error UI
             if (_connectionError && !_isOffline) _buildErrorUI(),
 
-            // Loading bar
             if (_isLoading && !_connectionError && !_isOffline)
               Positioned(
                 top: 0,
@@ -267,9 +254,6 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
                 ),
               ),
 
-            // ============================================================
-            // KLIKKBAR LOGO OVERLAY (øverst til venstre)
-            // ============================================================
             if (!_connectionError && !_isOffline)
               Positioned(
                 top: 20,
@@ -280,13 +264,12 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      // Vis logo-ikonet kun når man klikker
                       color: _logoTaps > 0
-                          ? Colors.blue.withOpacity(0.1 * _logoTaps)
+                          ? Colors.blue.withValues(alpha: 0.1 * _logoTaps)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(40),
                       border: _logoTaps > 0
-                          ? Border.all(color: Colors.blue.withOpacity(0.3), width: 2)
+                          ? Border.all(color: Colors.blue.withValues(alpha: 0.3), width: 2)
                           : null,
                     ),
                     child: Center(
@@ -296,7 +279,7 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: Colors.blue.withOpacity(0.7),
+                          color: Colors.blue.withValues(alpha: 0.7),
                         ),
                       )
                           : const SizedBox.shrink(),

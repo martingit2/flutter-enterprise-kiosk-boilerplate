@@ -14,14 +14,6 @@ class AppColors {
 class AppConfig {
   static const String appTitle = 'Taskhamster Hub';
   static const String adminPin = '1234';
-
-  // Test-tid (endre til 5 minutter senere)
   static const Duration idleTimeout = Duration(seconds: 10);
-  
-  // 1.0 = Fullt lys (100%)
-  // 0.5 = Halvt lys (50%)
-  // 0.15 = Dimmet (15%) <- Prøv denne nå som det svarte filteret er borte
-  // 0.01 = Nesten av (1%)
-
   static const double dimmedBrightness = 0.15;
 }

@@ -4,7 +4,6 @@ import '../config/app_config.dart';
 import '../core/security/security_service.dart';
 import '../core/kiosk_controller.dart';
 
-/// Admin PIN Dialog for unlocking kiosk
 class AdminPinDialog extends StatefulWidget {
   const AdminPinDialog({super.key});
 
@@ -41,10 +40,8 @@ class _AdminPinDialogState extends State<AdminPinDialog> {
       if (!mounted) return;
 
       if (isValid) {
-        // Unlock device
         await KioskController.unlockDevice();
-
-        // Close dialog with success
+        if (!mounted) return;
         Navigator.of(context).pop(true);
       } else {
         setState(() {
@@ -75,11 +72,10 @@ class _AdminPinDialogState extends State<AdminPinDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Lock Icon
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.accentBlue.withOpacity(0.1),
+                color: AppColors.accentBlue.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -91,7 +87,6 @@ class _AdminPinDialogState extends State<AdminPinDialog> {
 
             const SizedBox(height: 24),
 
-            // Title
             const Text(
               'Admin Tilgang',
               style: TextStyle(
@@ -113,7 +108,6 @@ class _AdminPinDialogState extends State<AdminPinDialog> {
 
             const SizedBox(height: 32),
 
-            // PIN Input
             TextField(
               controller: _pinController,
               autofocus: true,
@@ -157,7 +151,6 @@ class _AdminPinDialogState extends State<AdminPinDialog> {
 
             const SizedBox(height: 32),
 
-            // Buttons
             Row(
               children: [
                 Expanded(
@@ -202,7 +195,6 @@ class _AdminPinDialogState extends State<AdminPinDialog> {
   }
 }
 
-/// Helper function to show admin PIN dialog
 Future<bool> showAdminPinDialog(BuildContext context) async {
   final result = await showDialog<bool>(
     context: context,

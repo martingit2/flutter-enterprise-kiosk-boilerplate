@@ -1,17 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'config/environment.dart';
 import 'config/app_config.dart';
 import 'core/security/security_service.dart';
 import 'core/security/tamper_detection_service.dart';
+import 'core/security/device_identification_service.dart';
+import 'core/security/local_authentication_service.dart';
 import 'core/kiosk_wrapper.dart';
 import 'screens/enterprise_webview_screen.dart';
+import 'screens/local_pin_login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Print configuration
+  try {
+    await dotenv.load(fileName: ".env");
+    debugPrint('✅ .env file loaded successfully');
+  } catch (e) {
+    debugPrint('⚠️ Failed to load .env file: $e');
+    debugPrint('⚠️ Using default/fallback values');
+  }
+
   Environment.printConfig();
 
   runApp(const TaskhamsterApp());
@@ -27,11 +38,14 @@ class TaskhamsterApp extends StatefulWidget {
 class _TaskhamsterAppState extends State<TaskhamsterApp> with WidgetsBindingObserver {
   final _security = SecurityService();
   final _tamperDetection = TamperDetectionService();
+  final _deviceId = DeviceIdentificationService();
+  final _localAuth = LocalAuthenticationService();
 
   bool _isInitialized = false;
   bool _initializationFailed = false;
   String? _errorMessage;
   bool _deviceTampered = false;
+  bool _isAuthenticated = false;
 
   @override
   void initState() {
@@ -48,7 +62,6 @@ class _TaskhamsterAppState extends State<TaskhamsterApp> with WidgetsBindingObse
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Re-hide system UI when app comes back to foreground
     if (state == AppLifecycleState.resumed) {
       _hideSystemUI();
     }
@@ -56,19 +69,24 @@ class _TaskhamsterAppState extends State<TaskhamsterApp> with WidgetsBindingObse
 
   Future<void> _initializeApp() async {
     try {
-      // 1. Enable wakelock
+      debugPrint('🚀 Initializing app...');
+
       await WakelockPlus.enable();
       debugPrint('✅ Wakelock enabled');
 
-      // 2. Hide system UI AGGRESSIVELY
       await _hideSystemUI();
       debugPrint('✅ System UI hidden');
 
-      // 3. Initialize security (encrypted storage, PIN)
       await _security.initializeAdminPin();
       debugPrint('✅ Security initialized');
 
-      // 4. Check device integrity
+      final deviceInfo = await _deviceId.getDeviceInfo();
+      debugPrint('📱 Device Info:');
+      debugPrint('   Fingerprint: ${deviceInfo.fingerprint}');
+      debugPrint('   Serial: ${deviceInfo.serialNumber}');
+      debugPrint('   Model: ${deviceInfo.model}');
+      debugPrint('   Manufacturer: ${deviceInfo.manufacturer}');
+
       if (Environment.enableJailbreakDetection) {
         final integrityResult = await _tamperDetection.checkDeviceIntegrity();
         _deviceTampered = integrityResult.isTampered;
@@ -84,7 +102,18 @@ class _TaskhamsterAppState extends State<TaskhamsterApp> with WidgetsBindingObse
         }
       }
 
-      // 5. All checks passed
+      debugPrint('🔐 Attempting auto-login...');
+      final authResult = await _localAuth.attemptAutoLogin();
+
+      if (authResult.success) {
+        debugPrint('✅ Auto-login successful - User: ${authResult.userId}');
+        _isAuthenticated = true;
+      } else {
+        debugPrint('⚠️ Auto-login failed: ${authResult.message}');
+        debugPrint('   User needs to log in with PIN');
+        _isAuthenticated = false;
+      }
+
       _isInitialized = true;
       if (mounted) setState(() {});
 
@@ -103,21 +132,17 @@ class _TaskhamsterAppState extends State<TaskhamsterApp> with WidgetsBindingObse
   }
 
   Future<void> _hideSystemUI() async {
-    // KRITISK: Disse må kalles i rekkefølge for å fungere
     try {
-      // 1. Først sett immersive sticky mode
       await SystemChrome.setEnabledSystemUIMode(
         SystemUiMode.immersiveSticky,
-        overlays: [], // Ingen overlays i det hele tatt
+        overlays: [],
       );
 
-      // 2. Deretter tvinger vi landscape (dette "reloader" systemet)
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.landscapeRight,
         DeviceOrientation.landscapeLeft,
       ]);
 
-      // 3. Til slutt skjuler vi status/navigation bars eksplisitt
       await SystemChrome.setEnabledSystemUIMode(
         SystemUiMode.immersiveSticky,
         overlays: [],
@@ -127,6 +152,11 @@ class _TaskhamsterAppState extends State<TaskhamsterApp> with WidgetsBindingObse
     } catch (e) {
       debugPrint('⚠️ Failed to hide system UI: $e');
     }
+  }
+
+  void _onLoginSuccess(String userId) {
+    debugPrint('✅ Login successful - User: $userId');
+    setState(() => _isAuthenticated = true);
   }
 
   @override
@@ -155,24 +185,36 @@ class _TaskhamsterAppState extends State<TaskhamsterApp> with WidgetsBindingObse
       return _buildErrorScreen();
     }
 
+    if (!_isAuthenticated) {
+      return LocalPinLoginScreen(onLoginSuccess: _onLoginSuccess);
+    }
+
     return const KioskWrapper(
       child: EnterpriseWebViewScreen(),
     );
   }
 
   Widget _buildLoadingScreen() {
-    return const Scaffold(
+    return Scaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 24),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 24),
             Text(
-              'Laster Taskhamster...',
-              style: TextStyle(
+              'Laster ${AppConfig.appTitle}...',
+              style: const TextStyle(
                 fontSize: 18,
                 color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Sjekker device fingerprint...',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textLight,
               ),
             ),
           ],

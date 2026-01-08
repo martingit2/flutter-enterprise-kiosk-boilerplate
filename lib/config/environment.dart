@@ -1,39 +1,43 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-/// Application Environment Configuration
 class Environment {
-  // WebView URL - Dette er hovedsiden som lastes
-  static const String webAppUrl = 'https://app.taskhamster.no';
+  static String get webAppUrl =>
+      dotenv.env['WEBAPP_URL'] ?? 'https://app.taskhamster.no';
 
-  // Allowed Domains - Kun disse domenene kan navigeres til
-  static const List<String> allowedDomains = [
-    'app.taskhamster.no',
-    'api.taskhamster.no'
-  ];
+  static List<String> get allowedDomains {
+    final domains = dotenv.env['ALLOWED_DOMAINS'] ?? 'app.taskhamster.no,api.taskhamster.no';
+    return domains.split(',').map((d) => d.trim()).toList();
+  }
 
-  // SSL Certificate Pins (SHA-256 hashes)
-  // TODO: Erstatt med faktiske sertifikat-fingeravtrykk
-  // Generer med: openssl s_client -connect app.taskhamster.no:443 | openssl x509 -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64
-  static const Map<String, List<String>> certificatePins = {
-    'taskhamster.no': [
-      'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', // TODO: Erstatt
-      'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=', // Backup sertifikat
-    ],
-  };
+  static bool get enableSSLPinning =>
+      dotenv.env['ENABLE_SSL_PINNING']?.toLowerCase() == 'true';
 
-  // Security Features
-  static const bool enableSSLPinning = false; // Sett til true når sertifikater er konfigurert
-  static const bool enableJailbreakDetection = false; // DEAKTIVERT: Pakken har kompatibilitetsproblemer
+  static Map<String, List<String>> get certificatePins {
+    final pinsString = dotenv.env['SSL_CERT_PINS_TASKHAMSTER'] ?? '';
+    if (pinsString.isEmpty) {
+      return {};
+    }
 
-  // Debug
+    final pins = pinsString.split(',').map((p) => p.trim()).toList();
+    return {
+      'taskhamster.no': pins,
+    };
+  }
+
+  static bool get enableJailbreakDetection =>
+      dotenv.env['ENABLE_JAILBREAK_DETECTION']?.toLowerCase() == 'true';
+
   static bool get isDevelopment => kDebugMode;
 
   static void printConfig() {
     if (kDebugMode) {
       print('🚀 Taskhamster Configuration');
       print('🌐 WebView URL: $webAppUrl');
-      print('🔒 SSL Pinning: $enableSSLPinning');
-      print('🔐 Jailbreak Detection: $enableJailbreakDetection (temporarily disabled)');
+      print('🔒 Allowed Domains: ${allowedDomains.join(', ')}');
+      print('🔐 SSL Pinning: $enableSSLPinning');
+      print('🛡️ Jailbreak Detection: $enableJailbreakDetection');
+      print('📝 Config loaded from: .env');
     }
   }
 }

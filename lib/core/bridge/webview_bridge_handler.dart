@@ -1,10 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../security/security_service.dart';
 
-/// Secure WebView Bridge Handler
-/// Validates and processes messages from web content to native code
 class WebViewBridgeHandler {
   static final WebViewBridgeHandler _instance = WebViewBridgeHandler._internal();
   factory WebViewBridgeHandler() => _instance;
@@ -12,28 +10,28 @@ class WebViewBridgeHandler {
 
   final _security = SecurityService();
 
-  // Context for showing dialogs
-  BuildContext? _context;
+  static String get _bridgeSecret {
+    final envSecret = dotenv.env['BRIDGE_SECRET'];
+    if (envSecret != null && envSecret.isNotEmpty) {
+      return envSecret;
+    }
 
-  void setContext(BuildContext context) {
-    _context = context;
+    const dartDefineSecret = String.fromEnvironment('BRIDGE_SECRET');
+    if (dartDefineSecret.isNotEmpty) {
+      return dartDefineSecret;
+    }
+
+    if (kDebugMode) {
+      debugPrint('⚠️ WARNING: Using default bridge secret! Set BRIDGE_SECRET in .env');
+      return 'CHANGE_THIS_IN_PRODUCTION';
+    }
+
+    throw Exception('BRIDGE_SECRET not configured! Set it in .env file.');
   }
 
-  // ⚠️ SECURITY WARNING:
-  // Dette er bridge secret som brukes til HMAC-validering.
-  // I PRODUKSJON bør dette:
-  // 1. Genereres dynamisk ved build-tid (--dart-define)
-  //
-  // Generer med: openssl rand -base64 32
-  static const String _bridgeSecret = String.fromEnvironment(
-    'BRIDGE_SECRET',
-    defaultValue: 'CHANGE_THIS_IN_PRODUCTION',  // Fallback for testing
-  );
-
-  // Whitelist of allowed commands
   static const Set<String> _allowedCommands = {
     'REQUEST_UNLOCK',
-    'ADMIN_UNLOCK',        // Admin unlock fra logo klikk
+    'ADMIN_UNLOCK',
     'LOG_EVENT',
     'USER_ACTIVITY',
     'GET_DEVICE_ID',
@@ -41,14 +39,13 @@ class WebViewBridgeHandler {
     'REFRESH_SESSION',
   };
 
-  /// Handle incoming message from WebView
   Future<String?> handleMessage(String rawMessage) async {
     try {
       if (kDebugMode) {
-        print('🌐 WebView Message: ${rawMessage.substring(0, rawMessage.length > 100 ? 100 : rawMessage.length)}...');
+        final preview = rawMessage.substring(0, rawMessage.length > 100 ? 100 : rawMessage.length);
+        debugPrint('🌐 WebView Message: $preview...');
       }
 
-      // Parse JSON message
       final Map<String, dynamic> message;
       try {
         message = jsonDecode(rawMessage);
@@ -57,38 +54,33 @@ class WebViewBridgeHandler {
         return _errorResponse('Invalid message format');
       }
 
-      // Validate message structure
       if (!_validateMessageStructure(message)) {
         _logSecurityViolation('INVALID_STRUCTURE', message.toString());
         return _errorResponse('Invalid message structure');
       }
 
-      // Validate HMAC signature
       if (!_validateSignature(message)) {
         _logSecurityViolation('INVALID_SIGNATURE', message.toString());
         return _errorResponse('Invalid signature');
       }
 
-      // Validate command whitelist
       final command = message['command'] as String;
       if (!_allowedCommands.contains(command)) {
         _logSecurityViolation('UNAUTHORIZED_COMMAND', command);
         return _errorResponse('Unauthorized command');
       }
 
-      // Process command
       return await _processCommand(message);
 
     } catch (e, stackTrace) {
       if (kDebugMode) {
-        print('❌ Error handling WebView message: $e');
-        print(stackTrace);
+        debugPrint('❌ Error handling WebView message: $e');
+        debugPrint(stackTrace.toString());
       }
       return _errorResponse('Internal error');
     }
   }
 
-  /// Validate message structure
   bool _validateMessageStructure(Map<String, dynamic> message) {
     if (!message.containsKey('command')) return false;
     if (!message.containsKey('timestamp')) return false;
@@ -103,7 +95,6 @@ class WebViewBridgeHandler {
     return true;
   }
 
-  /// Validate HMAC signature
   bool _validateSignature(Map<String, dynamic> message) {
     try {
       final command = message['command'] as String;
@@ -111,20 +102,18 @@ class WebViewBridgeHandler {
       final payload = jsonEncode(message['payload']);
       final signature = message['signature'] as String;
 
-      // Check timestamp freshness (within 5 minutes)
       final messageTime = int.tryParse(timestamp);
       if (messageTime != null) {
         final now = DateTime.now().millisecondsSinceEpoch;
         final age = now - messageTime;
-        if (age > 300000) { // 5 minutes
+        if (age > 300000) {
           if (kDebugMode) {
-            print('⚠️ Message timestamp too old: ${age}ms');
+            debugPrint('⚠️ Message timestamp too old: ${age}ms');
           }
           return false;
         }
       }
 
-      // Compute expected signature
       final data = '$command:$timestamp:$payload';
       final expectedSignature = _security.computeHMAC(data, _bridgeSecret);
 
@@ -132,19 +121,18 @@ class WebViewBridgeHandler {
 
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Signature validation error: $e');
+        debugPrint('❌ Signature validation error: $e');
       }
       return false;
     }
   }
 
-  /// Process validated command
   Future<String?> _processCommand(Map<String, dynamic> message) async {
     final command = message['command'] as String;
     final payload = message['payload'] as Map<String, dynamic>;
 
     if (kDebugMode) {
-      print('✅ Processing command: $command');
+      debugPrint('✅ Processing command: $command');
     }
 
     switch (command) {
@@ -167,57 +155,29 @@ class WebViewBridgeHandler {
     }
   }
 
-  /// Command handlers
   Future<String> _handleRequestUnlock(Map<String, dynamic> payload) async {
     if (kDebugMode) {
-      print('🔓 Unlock requested from web');
+      debugPrint('🔓 Unlock requested from web');
     }
     return _successResponse({'message': 'Unlock request logged'});
   }
 
-  /// NEW: Handle admin unlock from logo click
   Future<String> _handleAdminUnlock(Map<String, dynamic> payload) async {
     if (kDebugMode) {
-      print('🔐 Admin unlock requested from web (logo click)');
+      debugPrint('🔐 Admin unlock requested from web');
     }
-
-    if (_context == null) {
-      return _errorResponse('No context available');
-    }
-
-    try {
-      // Import the dialog dynamically
-      final module = await import('../widgets/admin_pin_dialog.dart');
-      final showAdminPinDialog = module.showAdminPinDialog as Future<bool> Function(BuildContext);
-
-      final unlocked = await showAdminPinDialog(_context!);
-
-      if (unlocked) {
-        return _successResponse({
-          'unlocked': true,
-          'message': 'Device unlocked successfully'
-        });
-      } else {
-        return _errorResponse('Unlock cancelled or failed');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Admin unlock error: $e');
-      }
-      return _errorResponse('Failed to show unlock dialog');
-    }
+    return _successResponse({'message': 'Admin unlock not implemented'});
   }
 
   Future<String> _handleLogEvent(Map<String, dynamic> payload) async {
     final eventName = payload['event'] as String?;
     if (kDebugMode && eventName != null) {
-      print('📊 Event from web: $eventName');
+      debugPrint('📊 Event from web: $eventName');
     }
     return _successResponse({'logged': true});
   }
 
   Future<String> _handleUserActivity(Map<String, dynamic> payload) async {
-    // Reset idle timers, etc.
     return _successResponse({'acknowledged': true});
   }
 
@@ -229,7 +189,7 @@ class WebViewBridgeHandler {
   Future<String> _handleLogout(Map<String, dynamic> payload) async {
     await _security.clearApiToken();
     if (kDebugMode) {
-      print('👋 Logout from web');
+      debugPrint('👋 Logout from web');
     }
     return _successResponse({'logged_out': true});
   }
@@ -238,15 +198,13 @@ class WebViewBridgeHandler {
     return _successResponse({'session_refreshed': true});
   }
 
-  /// Security logging
   void _logSecurityViolation(String type, String details) {
     if (kDebugMode) {
-      print('⚠️ SECURITY VIOLATION: $type');
-      print('   Details: $details');
+      debugPrint('⚠️ SECURITY VIOLATION: $type');
+      debugPrint('   Details: $details');
     }
   }
 
-  /// Response helpers
   String _successResponse(Map<String, dynamic> data) {
     return jsonEncode({
       'success': true,
@@ -263,7 +221,6 @@ class WebViewBridgeHandler {
     });
   }
 
-  /// Generate JavaScript code for web app
   static String generateBridgeScript() {
     return '''
     (function() {
@@ -324,32 +281,8 @@ class WebViewBridgeHandler {
         }
       };
       
-      // EXAMPLE: Logo click handler (add to your logo element)
-      // let logoClickCount = 0;
-      // let logoClickTimer = null;
-      //
-      // document.querySelector('.your-logo-class').addEventListener('click', () => {
-      //   logoClickCount++;
-      //   
-      //   clearTimeout(logoClickTimer);
-      //   logoClickTimer = setTimeout(() => {
-      //     logoClickCount = 0;
-      //   }, 2000);
-      //   
-      //   if (logoClickCount === 5) {
-      //     logoClickCount = 0;
-      //     window.FlutterBridge.requestAdminUnlock();
-      //   }
-      // });
-      
-      console.log('✅ Flutter Bridge ready');
+      console.log('✅ Flutter Bridge ready (secret loaded from .env)');
     })();
     ''';
   }
-}
-
-// Helper function for dynamic import (fallback if not available)
-Future<dynamic> import(String path) async {
-  // This is a placeholder - in real Flutter, use actual import
-  throw UnsupportedError('Dynamic import not supported in Flutter');
 }

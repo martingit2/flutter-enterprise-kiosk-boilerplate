@@ -11,22 +11,17 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Core WebView
   webview_flutter: ^4.9.0
   webview_flutter_android: ^3.16.0
-
-  # Kiosk Features
   wakelock_plus: ^1.2.8
   screen_brightness: ^2.1.7
-
-  # Security (UTEN jailbreak detection)
   flutter_secure_storage: ^9.2.2
   crypto: ^3.0.6
-
-  # Utilities
   connectivity_plus: ^6.0.5
   device_info_plus: ^10.1.2
   package_info_plus: ^8.0.3
+  flutter_dotenv: ^6.0.0
+  uuid: ^4.5.2
 
 dev_dependencies:
   flutter_test:
@@ -35,3 +30,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - .env

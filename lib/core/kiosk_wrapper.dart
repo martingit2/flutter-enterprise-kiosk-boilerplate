@@ -49,17 +49,20 @@ class _KioskWrapperState extends State<KioskWrapper> with WidgetsBindingObserver
 
   Future<void> _resetBrightness() async {
     try {
-      await ScreenBrightness().resetScreenBrightness();
+      await ScreenBrightness().resetApplicationScreenBrightness();
       if (mounted) setState(() => _isDimmed = false);
-    } catch (e) { debugPrint("$e"); }
+    } catch (e) {
+      debugPrint('⚠️ Failed to reset brightness: $e');
+    }
   }
 
   Future<void> _dimScreen() async {
     try {
-      // Kun fysisk dimming
-      await ScreenBrightness().setScreenBrightness(AppConfig.dimmedBrightness);
+      await ScreenBrightness().setApplicationScreenBrightness(AppConfig.dimmedBrightness);
       if (mounted) setState(() => _isDimmed = true);
-    } catch (e) { debugPrint("$e"); }
+    } catch (e) {
+      debugPrint('⚠️ Failed to dim screen: $e');
+    }
   }
 
   void _restartIdleTimer() {
@@ -76,13 +79,10 @@ class _KioskWrapperState extends State<KioskWrapper> with WidgetsBindingObserver
         children: [
           widget.child,
 
-          // USYNLIG TOUCH-VERN
-          // Dette laget er nå 100% gjennomsiktig (Colors.transparent).
-          // Jobben dens er KUN å fange opp det første trykket når skjermen er dimmet.
           if (_isDimmed)
             Positioned.fill(
               child: Container(
-                color: Colors.transparent, // Ingen farge, slipper alt lys gjennom
+                color: Colors.transparent,
               ),
             ),
         ],

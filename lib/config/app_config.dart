@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-/// UI Theme Colors
 class AppColors {
   static const Color background = Color(0xFFF3F4F6);
   static const Color sidebar = Color(0xFFFFFFFF);
@@ -13,44 +13,43 @@ class AppColors {
   static const Color textLight = Color(0xFF6B7280);
 }
 
-/// Application Configuration
 class AppConfig {
-  // Application Metadata
-  static const String appTitle = 'Taskhamster Hub';
-  static const String appVersion = '2.0.0';
+  static String get appTitle =>
+      dotenv.env['APP_TITLE'] ?? 'Taskhamster Hub';
 
-  // Kiosk Behavior
-  static const Duration idleTimeout = Duration(minutes: 5); // Produksjon: 5 minutter
-  static const Duration demoIdleTimeout = Duration(seconds: 15); // Demo/Testing: 15 sekunder
+  static String get appVersion =>
+      dotenv.env['APP_VERSION'] ?? '2.0.0';
 
-  // Display Settings
-  static const double dimmedBrightness = 0.15; // 15% brightness når idle
-  static const double activeBrightness = 1.0; // 100% brightness når aktiv
+  static const Duration idleTimeout = Duration(minutes: 5);
+  static const Duration demoIdleTimeout = Duration(seconds: 15);
 
-  // Security Settings (for FlutterSecureStorage keys)
+  static const double dimmedBrightness = 0.15;
+  static const double activeBrightness = 1.0;
+
   static const String secureStorageKeyAdminPin = 'admin_pin';
   static const String secureStorageKeyDeviceId = 'device_id';
   static const String secureStorageKeyApiToken = 'api_token';
 
-  // Default PIN (kun brukt første gang, deretter lagret kryptert)
-  static const String defaultAdminPin = '1234';
+  static String get defaultAdminPin =>
+      dotenv.env['DEFAULT_ADMIN_PIN'] ?? '1234';
 
-  // Session Management
   static const Duration sessionTimeout = Duration(minutes: 30);
   static const bool clearCacheOnLogout = true;
 
-  // WebView Settings
-  static const bool enableWebViewDebugging = false; // Sett til false i produksjon
+  static bool get enableWebViewDebugging =>
+      dotenv.env['ENABLE_WEBVIEW_DEBUGGING']?.toLowerCase() == 'true';
+
   static const bool enableJavaScript = true;
   static const bool enableDomStorage = true;
   static const bool enableZoom = false;
 
-  // Development/Testing Overrides
-  static bool get isDemoMode => const bool.fromEnvironment('DEMO_MODE', defaultValue: false);
-  static Duration get effectiveIdleTimeout => isDemoMode ? demoIdleTimeout : idleTimeout;
+  static bool get isDemoMode =>
+      dotenv.env['DEMO_MODE']?.toLowerCase() == 'true';
+
+  static Duration get effectiveIdleTimeout =>
+      isDemoMode ? demoIdleTimeout : idleTimeout;
 }
 
-/// UI Dimensions
 class AppDimensions {
   static const double sidebarWidth = 250;
   static const double cardElevation = 2;
@@ -60,7 +59,6 @@ class AppDimensions {
   static const double largeIconSize = 48;
 }
 
-/// Text Styles
 class AppTextStyles {
   static const TextStyle heading1 = TextStyle(
     fontSize: 24,
