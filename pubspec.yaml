@@ -1,32 +1,36 @@
 name: taskhamster
-description: "Enterprise Kiosk System for Taskhamster tablets."
+description: "Taskhamster Kiosk WebView App"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 2.0.0+2
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.5.4 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # Standard iOS ikoner
-  cupertino_icons: ^1.0.8
+  # Core WebView
+  webview_flutter: ^4.9.0
+  webview_flutter_android: ^3.16.0
 
-  # --- KIOSK FUNKSJONALITET ---
-
-  # Holder CPU og Skjerm våken
+  # Kiosk Features
   wakelock_plus: ^1.2.8
-
-  # Gir tilgang til maskinvarens lysstyrke (Versjonen terminalen din foreslo)
   screen_brightness: ^2.1.7
+
+  # Security (UTEN jailbreak detection)
+  flutter_secure_storage: ^9.2.2
+  crypto: ^3.0.6
+
+  # Utilities
+  connectivity_plus: ^6.0.5
+  device_info_plus: ^10.1.2
+  package_info_plus: ^8.0.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  # Linter-regler
   flutter_lints: ^5.0.0
 
 flutter:
