@@ -14,11 +14,21 @@ class AppColors {
 }
 
 class AppConfig {
-  static String get appTitle =>
-      dotenv.env['APP_TITLE'] ?? 'Taskhamster Hub';
+  static String get appTitle {
+    final title = dotenv.env['APP_TITLE'];
+    if (title == null || title.isEmpty) {
+      throw Exception('APP_TITLE must be set in .env file');
+    }
+    return title;
+  }
 
-  static String get appVersion =>
-      dotenv.env['APP_VERSION'] ?? '2.0.0';
+  static String get appVersion {
+    final version = dotenv.env['APP_VERSION'];
+    if (version == null || version.isEmpty) {
+      throw Exception('APP_VERSION must be set in .env file');
+    }
+    return version;
+  }
 
   static const Duration idleTimeout = Duration(minutes: 5);
   static const Duration demoIdleTimeout = Duration(seconds: 15);
@@ -30,8 +40,13 @@ class AppConfig {
   static const String secureStorageKeyDeviceId = 'device_id';
   static const String secureStorageKeyApiToken = 'api_token';
 
-  static String get defaultAdminPin =>
-      dotenv.env['DEFAULT_ADMIN_PIN'] ?? '1234';
+  static String get defaultAdminPin {
+    final pin = dotenv.env['DEFAULT_ADMIN_PIN'];
+    if (pin == null || pin.isEmpty) {
+      throw Exception('DEFAULT_ADMIN_PIN must be set in .env file');
+    }
+    return pin;
+  }
 
   static const Duration sessionTimeout = Duration(minutes: 30);
   static const bool clearCacheOnLogout = true;

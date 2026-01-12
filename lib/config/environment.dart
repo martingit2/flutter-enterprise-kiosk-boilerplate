@@ -2,11 +2,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class Environment {
-  static String get webAppUrl =>
-      dotenv.env['WEBAPP_URL'] ?? 'https://app.taskhamster.no';
+  static String get webAppUrl {
+    final url = dotenv.env['WEBAPP_URL'];
+    if (url == null || url.isEmpty) {
+      throw Exception('WEBAPP_URL must be set in .env file');
+    }
+    return url;
+  }
 
   static List<String> get allowedDomains {
-    final domains = dotenv.env['ALLOWED_DOMAINS'] ?? 'app.taskhamster.no,api.taskhamster.no';
+    final domains = dotenv.env['ALLOWED_DOMAINS'];
+    if (domains == null || domains.isEmpty) {
+      throw Exception('ALLOWED_DOMAINS must be set in .env file');
+    }
     return domains.split(',').map((d) => d.trim()).toList();
   }
 
