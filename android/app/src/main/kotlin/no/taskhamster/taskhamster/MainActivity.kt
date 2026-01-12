@@ -17,12 +17,10 @@ class MainActivity: FlutterActivity() {
             try {
                 when (call.method) {
                     "startLockTask" -> {
-                        // Aktiverer Androids strengeste låsemodus (skjuler Home/Back/Statusbar)
                         startLockTask()
                         result.success(true)
                     }
                     "stopLockTask" -> {
-                        // Deaktiverer låsen slik at man kan gå ut av appen
                         stopLockTask()
                         result.success(true)
                     }
@@ -31,7 +29,6 @@ class MainActivity: FlutterActivity() {
                     }
                 }
             } catch (e: Exception) {
-                // Enterprise logging: Vi sender feilen tilbake til Flutter slik at den kan logges der
                 result.error("KIOSK_ERROR", "Kunne ikke endre låsemodus: ${e.message}", null)
             }
         }

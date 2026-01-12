@@ -2,8 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'device_identification_service.dart';
 
-/// Local-only authentication (no backend required)
-/// Auto-login based on device fingerprint stored locally
 class LocalAuthenticationService {
   static final LocalAuthenticationService _instance = LocalAuthenticationService._internal();
   factory LocalAuthenticationService() => _instance;
@@ -21,7 +19,6 @@ class LocalAuthenticationService {
   static const String _registeredUserIdKey = 'registered_user_id';
   static const String _registrationTimestampKey = 'registration_timestamp';
 
-  /// Check if device is registered for auto-login
   Future<bool> isDeviceRegistered() async {
     try {
       final storedFingerprint = await _secureStorage.read(key: _registeredFingerprintKey);
@@ -42,7 +39,6 @@ class LocalAuthenticationService {
     }
   }
 
-  /// Attempt auto-login with device fingerprint
   Future<AuthResult> attemptAutoLogin() async {
     try {
       if (!await isDeviceRegistered()) {
@@ -64,7 +60,6 @@ class LocalAuthenticationService {
     }
   }
 
-  /// Register device after successful PIN authentication
   Future<AuthResult> registerDevice() async {
     try {
       final deviceInfo = await _deviceId.getDeviceInfo();
@@ -90,7 +85,6 @@ class LocalAuthenticationService {
     }
   }
 
-  /// Unregister device (logout)
   Future<void> clearRegistration() async {
     await _secureStorage.delete(key: _registeredFingerprintKey);
     await _secureStorage.delete(key: _registeredUserIdKey);
@@ -100,12 +94,10 @@ class LocalAuthenticationService {
     debugPrint('🗑️ Device registration cleared');
   }
 
-  /// Get registered user ID
   Future<String?> getUserId() async {
     return await _secureStorage.read(key: _registeredUserIdKey);
   }
 
-  /// Get registration info
   Future<Map<String, String?>> getRegistrationInfo() async {
     return {
       'fingerprint': await _secureStorage.read(key: _registeredFingerprintKey),

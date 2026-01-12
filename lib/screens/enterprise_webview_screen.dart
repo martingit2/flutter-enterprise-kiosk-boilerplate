@@ -3,12 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import '../config/environment.dart';
 import '../config/app_config.dart';
 import '../widgets/admin_pin_dialog.dart';
 
 class EnterpriseWebViewScreen extends StatefulWidget {
-  const EnterpriseWebViewScreen({super.key});
+  final String initialUrl;
+
+  const EnterpriseWebViewScreen({
+    super.key,
+    required this.initialUrl,
+  });
 
   @override
   State<EnterpriseWebViewScreen> createState() => _EnterpriseWebViewScreenState();
@@ -107,19 +113,16 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
       final uri = Uri.parse(request.url);
 
       if (uri.scheme != 'https') {
-        debugPrint('⚠️ Blocked non-HTTPS: ${request.url}');
         return NavigationDecision.prevent;
       }
 
       if (!Environment.allowedDomains.contains(uri.host)) {
-        debugPrint('⚠️ Blocked unauthorized domain: ${uri.host}');
         return NavigationDecision.prevent;
       }
 
       return NavigationDecision.navigate;
 
     } catch (e) {
-      debugPrint('❌ Navigation validation error: $e');
       return NavigationDecision.prevent;
     }
   }
@@ -133,8 +136,6 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
 
   Future<void> _handleSessionTimeout() async {
     try {
-      debugPrint('⏱️ Session timeout');
-
       if (AppConfig.clearCacheOnLogout) {
         await _controller.clearCache();
         await _controller.clearLocalStorage();
@@ -143,7 +144,9 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
       await _loadWebApp();
 
     } catch (e) {
-      debugPrint('❌ Session timeout error: $e');
+      if (kDebugMode) {
+        debugPrint('Session timeout error: $e');
+      }
     }
   }
 
@@ -165,7 +168,6 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
   }
 
   void _handleInitializationError(dynamic error) {
-    debugPrint('❌ WebView init failed: $error');
     if (mounted) {
       setState(() {
         _connectionError = true;
@@ -176,8 +178,6 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
   }
 
   void _handleResourceError(WebResourceError error) {
-    debugPrint('❌ WebResourceError: ${error.description}');
-
     if (mounted) {
       setState(() {
         _connectionError = true;
@@ -189,7 +189,7 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
 
   Future<void> _loadWebApp() async {
     try {
-      await _controller.loadRequest(Uri.parse(Environment.webAppUrl));
+      await _controller.loadRequest(Uri.parse(widget.initialUrl));
     } catch (e) {
       _handleInitializationError(e);
     }
@@ -197,13 +197,9 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
 
   void _handleLogoTap() {
     _logoTaps++;
-    debugPrint('🖱️ Logo tap: $_logoTaps/5');
 
     _tapResetTimer?.cancel();
     _tapResetTimer = Timer(const Duration(seconds: 2), () {
-      if (_logoTaps < 5) {
-        debugPrint('⏱️ Tap timeout - resetting');
-      }
       setState(() => _logoTaps = 0);
     });
 
@@ -217,15 +213,7 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
   }
 
   Future<void> _showAdminPinDialog() async {
-    debugPrint('🔐 Showing admin PIN dialog');
-
-    final unlocked = await showAdminPinDialog(context);
-
-    if (unlocked) {
-      debugPrint('✅ Device unlocked successfully');
-    } else {
-      debugPrint('⚠️ Unlock cancelled or failed');
-    }
+    await showAdminPinDialog(context);
   }
 
   @override

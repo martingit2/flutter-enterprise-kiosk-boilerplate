@@ -25,9 +25,6 @@ class Environment {
     };
   }
 
-  static bool get enableJailbreakDetection =>
-      dotenv.env['ENABLE_JAILBREAK_DETECTION']?.toLowerCase() == 'true';
-
   static bool get isDevelopment => kDebugMode;
 
   static void printConfig() {
@@ -36,7 +33,6 @@ class Environment {
       print('🌐 WebView URL: $webAppUrl');
       print('🔒 Allowed Domains: ${allowedDomains.join(', ')}');
       print('🔐 SSL Pinning: $enableSSLPinning');
-      print('🛡️ Jailbreak Detection: $enableJailbreakDetection');
       print('📝 Config loaded from: .env');
     }
   }
