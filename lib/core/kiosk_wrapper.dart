@@ -51,18 +51,14 @@ class _KioskWrapperState extends State<KioskWrapper> with WidgetsBindingObserver
     try {
       await ScreenBrightness().resetApplicationScreenBrightness();
       if (mounted) setState(() => _isDimmed = false);
-    } catch (e) {
-      debugPrint('⚠️ Failed to reset brightness: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> _dimScreen() async {
     try {
       await ScreenBrightness().setApplicationScreenBrightness(AppConfig.dimmedBrightness);
       if (mounted) setState(() => _isDimmed = true);
-    } catch (e) {
-      debugPrint('⚠️ Failed to dim screen: $e');
-    }
+    } catch (_) {}
   }
 
   void _restartIdleTimer() {

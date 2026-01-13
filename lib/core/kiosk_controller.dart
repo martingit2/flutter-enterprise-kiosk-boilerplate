@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
 
 class KioskController {
   static const platform = MethodChannel('com.taskhamster.kiosk/control');
@@ -9,9 +8,7 @@ class KioskController {
     if (Platform.isAndroid) {
       try {
         await platform.invokeMethod('startLockTask');
-      } catch (e) {
-        debugPrint("Kiosk Lock Error: $e");
-      }
+      } catch (_) {}
     }
   }
 
@@ -19,9 +16,7 @@ class KioskController {
     if (Platform.isAndroid) {
       try {
         await platform.invokeMethod('stopLockTask');
-      } catch (e) {
-        debugPrint("Kiosk Unlock Error: $e");
-      }
+      } catch (_) {}
     }
   }
 }

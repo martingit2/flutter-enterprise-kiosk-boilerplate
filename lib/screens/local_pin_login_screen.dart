@@ -47,17 +47,13 @@ class _LocalPinLoginScreenState extends State<LocalPinLoginScreen> {
       final isValid = await _security.verifyAdminPin(_pinController.text);
 
       if (isValid) {
-        debugPrint('✅ PIN validated');
-
-        debugPrint('📝 Registering device locally...');
         final authResult = await _localAuth.registerDevice();
 
         if (authResult.success) {
-          debugPrint('✅ Device registered locally');
           widget.onLoginSuccess(authResult.userId!);
         } else {
           setState(() {
-            _errorMessage = 'Device registration failed: ${authResult.message}';
+            _errorMessage = 'Registration failed';
             _isLoading = false;
           });
         }
@@ -69,9 +65,8 @@ class _LocalPinLoginScreenState extends State<LocalPinLoginScreen> {
         _pinController.clear();
       }
     } catch (e) {
-      debugPrint('❌ Login error: $e');
       setState(() {
-        _errorMessage = 'Login feilet: $e';
+        _errorMessage = 'Login feilet';
         _isLoading = false;
       });
     }

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart';
 import '../config/environment.dart';
 import '../config/app_config.dart';
 import '../widgets/admin_pin_dialog.dart';
@@ -143,10 +142,8 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
 
       await _loadWebApp();
 
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Session timeout error: $e');
-      }
+    } catch (_) {
+      // Silent failure
     }
   }
 

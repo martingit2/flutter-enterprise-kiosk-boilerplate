@@ -99,9 +99,7 @@ class WebViewBridgeHandler {
             if (window.FlutterKioskBridge) {
               window.FlutterKioskBridge.postMessage(message);
             }
-          } catch (error) {
-            console.error('Bridge error:', error);
-          }
+          } catch (error) {}
         },
         
         userActivity() {

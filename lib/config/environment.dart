@@ -35,13 +35,5 @@ class Environment {
 
   static bool get isDevelopment => kDebugMode;
 
-  static void printConfig() {
-    if (kDebugMode) {
-      print('🚀 Taskhamster Configuration');
-      print('🌐 WebView URL: $webAppUrl');
-      print('🔒 Allowed Domains: ${allowedDomains.join(', ')}');
-      print('🔐 SSL Pinning: $enableSSLPinning');
-      print('📝 Config loaded from: .env');
-    }
-  }
+  static void printConfig() {}
 }

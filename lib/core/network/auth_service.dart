@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:webview_flutter/webview_flutter.dart';
 import '../../config/environment.dart';
@@ -23,39 +22,23 @@ class AuthService {
     final urlString = '${Environment.webAppUrl}/api/v1/autoauth';
     final url = Uri.parse(urlString);
 
-    debugPrint('🛑 DEBUG START ------------------------------------------------');
-    debugPrint('1. Prøver å koble til: $urlString');
-    debugPrint('2. Enhets-ID (Serial): $deviceId');
-
     try {
       final request = http.Request('POST', url);
       request.bodyFields = {'serial': deviceId};
-
       request.followRedirects = false;
 
-      debugPrint('3. Sender forespørsel nå (Timeout: 5 sekunder)...');
-
       final streamedResponse = await _client.send(request).timeout(
-        const Duration(seconds: 5),
+        const Duration(seconds: 10),
         onTimeout: () {
-          throw TimeoutException('Klarte ikke å nå serveren innen 5 sekunder.');
+          throw TimeoutException('Connection timed out');
         },
       );
 
       final response = await http.Response.fromStream(streamedResponse);
 
-      debugPrint('4. Svar mottatt fra server!');
-      debugPrint('   Status kode: ${response.statusCode}');
-      debugPrint('   Headers: ${response.headers}');
-
-      if (response.statusCode != 302) {
-        debugPrint('   Body: ${response.body}');
-      }
-
       if (response.statusCode == 302) {
         final String? rawCookie = response.headers['set-cookie'];
         if (rawCookie != null) {
-          debugPrint('   Fant cookie, injiserer i WebView...');
           await _injectSessionCookie(rawCookie, url.host);
         }
 
@@ -65,49 +48,39 @@ class AuthService {
               ? location
               : '${Environment.webAppUrl}$location';
 
-          debugPrint('✅ SUKSESS! Omdirigerer til: $targetUrl');
           return AuthResult(
               status: AuthStatus.authenticated, targetUrl: targetUrl);
         }
 
         return AuthResult(
             status: AuthStatus.serverError,
-            errorMessage: 'Mangler Location header i svar fra server');
+            errorMessage: 'Protocol Error');
 
       } else if (response.statusCode == 400) {
-        debugPrint('⚠️ FEIL (400): Enheten er ikke registrert i Django Admin ennå.');
-        return AuthResult(status: AuthStatus.deviceNotRegistered, errorMessage: response.body);
+        return AuthResult(
+            status: AuthStatus.deviceNotRegistered,
+            errorMessage: response.body);
 
       } else {
-        debugPrint('❌ SERVER FEIL: ${response.statusCode}');
         return AuthResult(
             status: AuthStatus.serverError,
-            errorMessage: 'Status code: ${response.statusCode}');
+            errorMessage: 'Server Error: ${response.statusCode}');
       }
 
-    } on SocketException catch (e) {
-      debugPrint('❌ NETTVERKSFEIL (SocketException):');
-      debugPrint('   Dette betyr at appen ikke finner serveren på $urlString');
-      debugPrint('   Sjekk at serveren kjører og at IP-adressen er riktig.');
-      debugPrint('   Feilmelding: ${e.message}');
+    } on SocketException catch (_) {
       return AuthResult(
           status: AuthStatus.networkError,
-          errorMessage: 'Ingen kontakt med server (Connection Refused)');
+          errorMessage: 'Connection Refused');
 
     } on TimeoutException {
-      debugPrint('❌ TIMEOUT:');
-      debugPrint('   Serveren svarte ikke. Dette er nesten alltid Windows Brannmur.');
       return AuthResult(
           status: AuthStatus.networkError,
-          errorMessage: 'Tidsavbrudd - Sjekk brannmur på PC');
+          errorMessage: 'Connection Timeout');
 
     } catch (e) {
-      debugPrint('❌ UKJENT FEIL: $e');
       return AuthResult(
           status: AuthStatus.networkError,
-          errorMessage: e.toString());
-    } finally {
-      debugPrint('🛑 DEBUG SLUTT ------------------------------------------------');
+          errorMessage: 'Unknown Error');
     }
   }
 
@@ -129,8 +102,6 @@ class AuthService {
           ),
         );
       }
-    } catch (e) {
-      debugPrint('Cookie injection failed: $e');
-    }
+    } catch (_) {}
   }
 }
