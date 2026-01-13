@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -33,32 +32,26 @@ class DeviceIdentificationService {
   }
 
   Future<String> _generateDeviceFingerprint() async {
-    try {
-      final androidInfo = await _deviceInfo.androidInfo;
+    final androidInfo = await _deviceInfo.androidInfo;
 
-      final components = <String>[
-        androidInfo.serialNumber,
-        androidInfo.id,
-        androidInfo.board,
-        androidInfo.bootloader,
-        androidInfo.brand,
-        androidInfo.device,
-        androidInfo.hardware,
-        androidInfo.manufacturer,
-        androidInfo.model,
-        androidInfo.product,
-      ];
+    final components = <String>[
+      androidInfo.serialNumber,
+      androidInfo.id,
+      androidInfo.board,
+      androidInfo.bootloader,
+      androidInfo.brand,
+      androidInfo.device,
+      androidInfo.hardware,
+      androidInfo.manufacturer,
+      androidInfo.model,
+      androidInfo.product,
+    ];
 
-      final combined = components.where((c) => c.isNotEmpty).join('|');
-      final bytes = utf8.encode(combined);
-      final hash = sha256.convert(bytes);
+    final combined = components.where((c) => c.isNotEmpty).join('|');
+    final bytes = utf8.encode(combined);
+    final hash = sha256.convert(bytes);
 
-      return hash.toString();
-
-    } catch (e) {
-      debugPrint('❌ Error generating device fingerprint: $e');
-      rethrow;
-    }
+    return hash.toString();
   }
 
   Future<String?> getHardwareSerial() async {
@@ -66,33 +59,26 @@ class DeviceIdentificationService {
       final androidInfo = await _deviceInfo.androidInfo;
       return androidInfo.serialNumber;
     } catch (e) {
-      debugPrint('❌ Error getting hardware serial: $e');
       return null;
     }
   }
 
   Future<DeviceInfo> getDeviceInfo() async {
-    try {
-      final androidInfo = await _deviceInfo.androidInfo;
-      final fingerprint = await getDeviceFingerprint();
+    final androidInfo = await _deviceInfo.androidInfo;
+    final fingerprint = await getDeviceFingerprint();
 
-      return DeviceInfo(
-        fingerprint: fingerprint,
-        serialNumber: androidInfo.serialNumber,
-        androidId: androidInfo.id,
-        manufacturer: androidInfo.manufacturer,
-        model: androidInfo.model,
-        brand: androidInfo.brand,
-        device: androidInfo.device,
-        androidVersion: androidInfo.version.release,
-        sdkVersion: androidInfo.version.sdkInt,
-        buildId: androidInfo.id,
-      );
-
-    } catch (e) {
-      debugPrint('❌ Error getting device info: $e');
-      rethrow;
-    }
+    return DeviceInfo(
+      fingerprint: fingerprint,
+      serialNumber: androidInfo.serialNumber,
+      androidId: androidInfo.id,
+      manufacturer: androidInfo.manufacturer,
+      model: androidInfo.model,
+      brand: androidInfo.brand,
+      device: androidInfo.device,
+      androidVersion: androidInfo.version.release,
+      sdkVersion: androidInfo.version.sdkInt,
+      buildId: androidInfo.id,
+    );
   }
 
   Future<bool> isDeviceRegistered() async {
@@ -102,12 +88,10 @@ class DeviceIdentificationService {
 
   Future<void> markDeviceRegistered() async {
     await _secureStorage.write(key: _deviceRegistrationKey, value: 'true');
-    debugPrint('✅ Device marked as registered for auto-login');
   }
 
   Future<void> clearDeviceRegistration() async {
     await _secureStorage.delete(key: _deviceRegistrationKey);
-    debugPrint('🗑️ Device registration cleared');
   }
 
   Future<bool> validateDeviceIntegrity() async {
@@ -117,9 +101,7 @@ class DeviceIdentificationService {
 
       final current = await _generateDeviceFingerprint();
       return stored == current;
-
     } catch (e) {
-      debugPrint('❌ Error validating device integrity: $e');
       return false;
     }
   }

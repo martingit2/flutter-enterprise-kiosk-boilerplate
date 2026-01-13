@@ -26,7 +26,6 @@ class Environment {
     if (pinsString.isEmpty) {
       return {};
     }
-
     final pins = pinsString.split(',').map((p) => p.trim()).toList();
     return {
       'taskhamster.no': pins,

@@ -1,274 +1,257 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_android/webview_flutter_android.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+import 'dart:async';
 import '../config/environment.dart';
-import '../config/app_config.dart';
-import '../widgets/admin_pin_dialog.dart';
+import '../core/kiosk_controller.dart';
+import '../core/kiosk_wrapper.dart';
 
 class EnterpriseWebViewScreen extends StatefulWidget {
-  final String initialUrl;
-
-  const EnterpriseWebViewScreen({
-    super.key,
-    required this.initialUrl,
-  });
+  const EnterpriseWebViewScreen({super.key});
 
   @override
   State<EnterpriseWebViewScreen> createState() => _EnterpriseWebViewScreenState();
 }
 
 class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
-  late final WebViewController _controller;
-
-  bool _isLoading = true;
-  double _loadingProgress = 0;
-  bool _connectionError = false;
-  bool _isOffline = false;
-  String? _errorMessage;
-
-  int _logoTaps = 0;
-  Timer? _tapResetTimer;
-
-  Timer? _sessionTimer;
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  late final WebViewController _webViewController;
+  bool _isKioskLocked = true;
 
   @override
   void initState() {
     super.initState();
+    _lockKiosk();
     _initializeWebView();
-    _startConnectivityMonitoring();
   }
 
-  @override
-  void dispose() {
-    _sessionTimer?.cancel();
-    _tapResetTimer?.cancel();
-    _connectivitySubscription?.cancel();
-    super.dispose();
+  Future<void> _lockKiosk() async {
+    await _setupFullscreen();
+    await _enableWakelock();
+    setState(() {
+      _isKioskLocked = true;
+    });
   }
 
-  void _initializeWebView() {
-    try {
-      final params = const PlatformWebViewControllerCreationParams();
-      _controller = WebViewController.fromPlatformCreationParams(params);
-
-      _controller
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setBackgroundColor(Colors.white)
-        ..setNavigationDelegate(_buildNavigationDelegate());
-
-      if (_controller.platform is AndroidWebViewController) {
-        final androidController = _controller.platform as AndroidWebViewController;
-        androidController.setMediaPlaybackRequiresUserGesture(false);
-      }
-
-      _loadWebApp();
-
-      if (mounted) setState(() {});
-    } catch (e) {
-      _handleInitializationError(e);
-    }
-  }
-
-  NavigationDelegate _buildNavigationDelegate() {
-    return NavigationDelegate(
-      onProgress: (int progress) {
-        if (mounted) {
-          setState(() => _loadingProgress = progress / 100);
-        }
-      },
-
-      onPageStarted: (String url) {
-        if (mounted) {
-          setState(() {
-            _isLoading = true;
-            _connectionError = false;
-            _errorMessage = null;
-          });
-        }
-      },
-
-      onPageFinished: (String url) async {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
-        _resetSessionTimer();
-      },
-
-      onWebResourceError: (WebResourceError error) {
-        _handleResourceError(error);
-      },
-
-      onNavigationRequest: (NavigationRequest request) {
-        return _validateNavigation(request);
-      },
+  Future<void> _setupFullscreen() async {
+    await SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.immersiveSticky,
+      overlays: [],
     );
   }
 
-  NavigationDecision _validateNavigation(NavigationRequest request) {
-    try {
-      final uri = Uri.parse(request.url);
-
-      if (uri.scheme != 'https') {
-        return NavigationDecision.prevent;
-      }
-
-      if (!Environment.allowedDomains.contains(uri.host)) {
-        return NavigationDecision.prevent;
-      }
-
-      return NavigationDecision.navigate;
-
-    } catch (e) {
-      return NavigationDecision.prevent;
-    }
+  Future<void> _enableWakelock() async {
+    await WakelockPlus.enable();
   }
 
-  void _resetSessionTimer() {
-    _sessionTimer?.cancel();
-    _sessionTimer = Timer(AppConfig.sessionTimeout, () {
-      _handleSessionTimeout();
-    });
+  void _initializeWebView() {
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0x00000000))
+      ..addJavaScriptChannel(
+        'FlutterUnlock',
+        onMessageReceived: (JavaScriptMessage message) {
+          if (message.message == 'unlock') {
+            _unlockKiosk();
+          }
+        },
+      )
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (String url) {},
+          onPageFinished: (String url) {
+            _injectUnlockScript();
+          },
+          onWebResourceError: (WebResourceError error) {},
+          onNavigationRequest: (NavigationRequest request) {
+            return NavigationDecision.navigate;
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(Environment.webAppUrl));
   }
 
-  Future<void> _handleSessionTimeout() async {
-    try {
-      if (AppConfig.clearCacheOnLogout) {
-        await _controller.clearCache();
-        await _controller.clearLocalStorage();
-      }
-
-      await _loadWebApp();
-
-    } catch (_) {
-      // Silent failure
-    }
-  }
-
-  void _startConnectivityMonitoring() {
-    _connectivitySubscription = Connectivity()
-        .onConnectivityChanged
-        .listen((List<ConnectivityResult> result) {
-      final isConnected = result.isNotEmpty &&
-          result.first != ConnectivityResult.none;
-
-      if (mounted) {
-        setState(() => _isOffline = !isConnected);
-      }
-
-      if (isConnected && _connectionError) {
-        _loadWebApp();
-      }
-    });
-  }
-
-  void _handleInitializationError(dynamic error) {
-    if (mounted) {
-      setState(() {
-        _connectionError = true;
-        _errorMessage = 'Failed to initialize WebView';
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _handleResourceError(WebResourceError error) {
-    if (mounted) {
-      setState(() {
-        _connectionError = true;
-        _errorMessage = error.description;
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _loadWebApp() async {
-    try {
-      await _controller.loadRequest(Uri.parse(widget.initialUrl));
-    } catch (e) {
-      _handleInitializationError(e);
-    }
-  }
-
-  void _handleLogoTap() {
-    _logoTaps++;
-
-    _tapResetTimer?.cancel();
-    _tapResetTimer = Timer(const Duration(seconds: 2), () {
-      setState(() => _logoTaps = 0);
-    });
-
-    if (_logoTaps >= 5) {
-      _tapResetTimer?.cancel();
-      setState(() => _logoTaps = 0);
-      _showAdminPinDialog();
-    } else {
-      setState(() {});
-    }
-  }
-
-  Future<void> _showAdminPinDialog() async {
-    await showAdminPinDialog(context);
+  void _injectUnlockScript() {
+    _webViewController.runJavaScript('''
+      (function() {
+        if (window.unlockInjected) return;
+        window.unlockInjected = true;
+        
+        const style = document.createElement('style');
+        style.textContent = \`
+          #flutter-unlock-button {
+            position: fixed;
+            top: 8px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            z-index: 999999;
+            pointer-events: all;
+            cursor: pointer;
+          }
+          #flutter-unlock-button .lock-part {
+            transition: all 0.4s ease;
+          }
+          #flutter-unlock-button #lock-shackle {
+            transform-origin: center;
+            transition: transform 0.4s ease;
+          }
+          #flutter-unlock-button .badge {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10B981;
+            color: white;
+            border-radius: 8px;
+            padding: 3px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+          }
+        \`;
+        document.head.appendChild(style);
+        
+        const container = document.createElement('div');
+        container.id = 'flutter-unlock-button';
+        container.innerHTML = \`
+          <svg width="60" height="60" viewBox="0 0 60 60">
+            <g transform="translate(30, 30)">
+              <path id="lock-shackle" class="lock-part"
+                    d="M -8 2 L -8 -6 Q -8 -14 0 -14 Q 8 -14 8 -6 L 8 2" 
+                    stroke="white" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+              <rect id="lock-body" class="lock-part"
+                    x="-12" y="2" width="24" height="22" rx="3"
+                    stroke="white" stroke-width="3.5" fill="none"/>
+              <circle id="lock-keyhole" class="lock-part" cx="0" cy="13" r="2.5" fill="white"/>
+            </g>
+          </svg>
+          <div class="badge" style="display: none;">0</div>
+        \`;
+        document.body.appendChild(container);
+        
+        let tapCount = 0;
+        let tapTimer = null;
+        const parts = ['lock-shackle', 'lock-body', 'lock-keyhole'];
+        
+        function updateLockParts(count) {
+          const shackle = document.getElementById('lock-shackle');
+          parts.forEach((partId, index) => {
+            const part = document.getElementById(partId);
+            if (!part) return;
+            if (index < count) {
+              if (partId === 'lock-keyhole') {
+                part.setAttribute('fill', '#10B981');
+              } else {
+                part.setAttribute('stroke', '#10B981');
+              }
+            } else {
+              if (partId === 'lock-keyhole') {
+                part.setAttribute('fill', 'white');
+              } else {
+                part.setAttribute('stroke', 'white');
+              }
+            }
+          });
+          if (count >= 3) {
+            shackle.style.transform = 'translate(0, -8px)';
+          } else {
+            shackle.style.transform = 'translate(0, 0)';
+          }
+        }
+        
+        container.addEventListener('click', function() {
+          tapCount++;
+          const badge = container.querySelector('.badge');
+          updateLockParts(tapCount);
+          if (tapCount > 0 && tapCount < 3) {
+            badge.textContent = tapCount;
+            badge.style.display = 'block';
+          }
+          if (tapTimer) clearTimeout(tapTimer);
+          if (tapCount >= 3) {
+            setTimeout(function() {
+              badge.style.display = 'none';
+              updateLockParts(0);
+              tapCount = 0;
+              window.FlutterUnlock.postMessage('unlock');
+            }, 300);
+          } else {
+            tapTimer = setTimeout(function() {
+              tapCount = 0;
+              updateLockParts(0);
+              badge.style.display = 'none';
+            }, 2000);
+          }
+        });
+      })();
+    ''');
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Stack(
+    return KioskWrapper(
+      child: Scaffold(
+        body: Stack(
           children: [
-            if (!_connectionError && !_isOffline)
-              WebViewWidget(controller: _controller),
-
-            if (_isOffline) _buildOfflineUI(),
-
-            if (_connectionError && !_isOffline) _buildErrorUI(),
-
-            if (_isLoading && !_connectionError && !_isOffline)
+            WebViewWidget(controller: _webViewController),
+            if (!_isKioskLocked)
               Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: LinearProgressIndicator(
-                  value: _loadingProgress,
-                  backgroundColor: Colors.transparent,
-                  color: AppColors.accentBlue,
-                  minHeight: 3,
-                ),
-              ),
-
-            if (!_connectionError && !_isOffline)
-              Positioned(
-                top: 20,
+                bottom: 100,
                 left: 20,
-                child: GestureDetector(
-                  onTap: _handleLogoTap,
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: _logoTaps > 0
-                          ? Colors.blue.withValues(alpha: 0.1 * _logoTaps)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(40),
-                      border: _logoTaps > 0
-                          ? Border.all(color: Colors.blue.withValues(alpha: 0.3), width: 2)
-                          : null,
-                    ),
-                    child: Center(
-                      child: _logoTaps > 0
-                          ? Text(
-                        '$_logoTaps',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue.withValues(alpha: 0.7),
+                right: 20,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.lock_open, color: Colors.white, size: 24),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Kiosk modus er deaktivert',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: _relockKiosk,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.orange,
+                          minimumSize: const Size(double.infinity, 48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
-                      )
-                          : const SizedBox.shrink(),
-                    ),
+                        child: const Text(
+                          'Lås Kiosk',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -278,84 +261,49 @@ class _EnterpriseWebViewScreenState extends State<EnterpriseWebViewScreen> {
     );
   }
 
-  Widget _buildOfflineUI() {
-    return Container(
-      color: Colors.white,
-      width: double.infinity,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.wifi_off, size: 100, color: AppColors.textLight),
-          const SizedBox(height: 24),
-          const Text(
-            'Ingen internettforbindelse',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryDark,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Vennligst sjekk nettverkstilkoblingen',
-            style: TextStyle(fontSize: 16, color: AppColors.textLight),
-          ),
-          const SizedBox(height: 40),
-          ElevatedButton.icon(
-            onPressed: _loadWebApp,
-            icon: const Icon(Icons.refresh),
-            label: const Text('PRØV IGJEN'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              backgroundColor: AppColors.accentBlue,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
+  Future<void> _unlockKiosk() async {
+    await KioskController.unlockDevice();
+    await WakelockPlus.disable();
+    await SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+      overlays: SystemUiOverlay.values,
     );
+    setState(() {
+      _isKioskLocked = false;
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kiosk modus deaktivert'),
+          backgroundColor: Color(0xFF10B981),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
-  Widget _buildErrorUI() {
-    return Container(
-      color: Colors.white,
-      width: double.infinity,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 100, color: AppColors.errorRed),
-          const SizedBox(height: 24),
-          const Text(
-            'Kunne ikke laste applikasjonen',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryDark,
-            ),
+  Future<void> _relockKiosk() async {
+    await _lockKiosk();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.lock, color: Colors.white),
+              SizedBox(width: 12),
+              Text('Kiosk modus aktivert!'),
+            ],
           ),
-          const SizedBox(height: 12),
-          if (_errorMessage != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14, color: AppColors.textLight),
-              ),
-            ),
-          const SizedBox(height: 40),
-          ElevatedButton.icon(
-            onPressed: _loadWebApp,
-            icon: const Icon(Icons.refresh),
-            label: const Text('PRØV IGJEN'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              backgroundColor: AppColors.accentBlue,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
+          backgroundColor: Color(0xFF10B981),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    WakelockPlus.disable();
+    super.dispose();
   }
 }

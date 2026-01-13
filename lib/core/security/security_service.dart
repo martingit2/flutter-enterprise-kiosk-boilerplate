@@ -15,26 +15,6 @@ class SecurityService {
   );
   final _deviceInfo = DeviceInfoPlugin();
 
-  Future<void> initializeAdminPin() async {
-    final existingPin = await getAdminPin();
-    if (existingPin == null) {
-      await setAdminPin(AppConfig.defaultAdminPin);
-    }
-  }
-
-  Future<String?> getAdminPin() async {
-    return await _storage.read(key: AppConfig.secureStorageKeyAdminPin);
-  }
-
-  Future<void> setAdminPin(String pin) async {
-    await _storage.write(key: AppConfig.secureStorageKeyAdminPin, value: pin);
-  }
-
-  Future<bool> verifyAdminPin(String enteredPin) async {
-    final storedPin = await getAdminPin();
-    return enteredPin == (storedPin ?? AppConfig.defaultAdminPin);
-  }
-
   Future<String> getDeviceId() async {
     String? id = await _storage.read(key: AppConfig.secureStorageKeyDeviceId);
     if (id == null) {

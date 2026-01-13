@@ -14,6 +14,14 @@ class AppColors {
 }
 
 class AppConfig {
+  static String get applicationId {
+    final id = dotenv.env['APPLICATION_ID'];
+    if (id == null || id.isEmpty) {
+      throw Exception('APPLICATION_ID must be set in .env file');
+    }
+    return id;
+  }
+
   static String get appTitle {
     final title = dotenv.env['APP_TITLE'];
     if (title == null || title.isEmpty) {
@@ -32,22 +40,10 @@ class AppConfig {
 
   static const Duration idleTimeout = Duration(minutes: 5);
   static const Duration demoIdleTimeout = Duration(seconds: 15);
-
   static const double dimmedBrightness = 0.15;
   static const double activeBrightness = 1.0;
-
-  static const String secureStorageKeyAdminPin = 'admin_pin';
   static const String secureStorageKeyDeviceId = 'device_id';
   static const String secureStorageKeyApiToken = 'api_token';
-
-  static String get defaultAdminPin {
-    final pin = dotenv.env['DEFAULT_ADMIN_PIN'];
-    if (pin == null || pin.isEmpty) {
-      throw Exception('DEFAULT_ADMIN_PIN must be set in .env file');
-    }
-    return pin;
-  }
-
   static const Duration sessionTimeout = Duration(minutes: 30);
   static const bool clearCacheOnLogout = true;
 

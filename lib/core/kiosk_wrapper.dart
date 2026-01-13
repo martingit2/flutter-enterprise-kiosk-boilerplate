@@ -21,7 +21,6 @@ class _KioskWrapperState extends State<KioskWrapper> with WidgetsBindingObserver
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     Future.delayed(const Duration(seconds: 2), () => KioskController.lockDevice());
-
     _resetBrightness();
     _restartIdleTimer();
   }
@@ -74,7 +73,6 @@ class _KioskWrapperState extends State<KioskWrapper> with WidgetsBindingObserver
       child: Stack(
         children: [
           widget.child,
-
           if (_isDimmed)
             Positioned.fill(
               child: Container(

@@ -13,7 +13,6 @@ class AppColors {
 
 class AppConfig {
   static const String appTitle = 'Taskhamster Hub';
-  static const String adminPin = '1234';
   static const Duration idleTimeout = Duration(seconds: 10);
   static const double dimmedBrightness = 0.15;
 }

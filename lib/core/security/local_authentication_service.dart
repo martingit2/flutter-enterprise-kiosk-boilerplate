@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'device_identification_service.dart';
 
@@ -27,14 +26,12 @@ class LocalAuthenticationService {
       final currentFingerprint = await _deviceId.getDeviceFingerprint();
 
       if (storedFingerprint != currentFingerprint) {
-        debugPrint('⚠️ Device fingerprint mismatch - device changed');
         await clearRegistration();
         return false;
       }
 
       return true;
     } catch (e) {
-      debugPrint('❌ Error checking registration: $e');
       return false;
     }
   }
@@ -51,11 +48,8 @@ class LocalAuthenticationService {
         return AuthResult.failed('User ID not found');
       }
 
-      debugPrint('✅ Auto-login successful (local)');
       return AuthResult.success(userId);
-
     } catch (e) {
-      debugPrint('❌ Auto-login error: $e');
       return AuthResult.failed('Auto-login error: $e');
     }
   }
@@ -72,15 +66,8 @@ class LocalAuthenticationService {
 
       await _deviceId.markDeviceRegistered();
 
-      debugPrint('✅ Device registered locally');
-      debugPrint('   User ID: $userId');
-      debugPrint('   Fingerprint: ${deviceInfo.fingerprint}');
-      debugPrint('   Serial: ${deviceInfo.serialNumber.isNotEmpty ? deviceInfo.serialNumber : 'N/A'}');
-
       return AuthResult.success(userId);
-
     } catch (e) {
-      debugPrint('❌ Device registration error: $e');
       return AuthResult.failed('Registration error: $e');
     }
   }
@@ -90,8 +77,6 @@ class LocalAuthenticationService {
     await _secureStorage.delete(key: _registeredUserIdKey);
     await _secureStorage.delete(key: _registrationTimestampKey);
     await _deviceId.clearDeviceRegistration();
-
-    debugPrint('🗑️ Device registration cleared');
   }
 
   Future<String?> getUserId() async {

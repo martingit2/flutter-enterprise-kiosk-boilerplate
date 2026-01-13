@@ -97,15 +97,12 @@ class DeviceRegistrationScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 Text(
                   isError ? 'Tilkoblingsfeil' : 'Enhet ikke registrert',
                   style: AppTextStyles.heading1,
                   textAlign: TextAlign.center,
                 ),
-
                 if (statusMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 16.0),
@@ -136,9 +133,7 @@ class DeviceRegistrationScreen extends StatelessWidget {
                       style: TextStyle(color: AppColors.textLight),
                     ),
                   ),
-
                 const SizedBox(height: 24),
-
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -173,9 +168,7 @@ class DeviceRegistrationScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -187,9 +180,7 @@ class DeviceRegistrationScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 ExpansionTile(
                   title: const Text("Vis QR-kode", textAlign: TextAlign.center, style: TextStyle(fontSize: 14)),
                   children: [
@@ -201,9 +192,7 @@ class DeviceRegistrationScreen extends StatelessWidget {
                     )
                   ],
                 ),
-
                 const SizedBox(height: 24),
-
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
