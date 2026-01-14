@@ -1,0 +1,7 @@
+flutter_native_splash:
+  color: "#F3F4F6"
+  image: "assets/images/taskhamster_text_logo_1800.png"
+  android_12:
+    image: "assets/images/taskhamster_text_logo_1800.png"
+    icon_background_color: "#F3F4F6"
+  fullscreen: false

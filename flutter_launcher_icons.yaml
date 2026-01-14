@@ -1,0 +1,15 @@
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/task_logo.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+
+  adaptive_icon_background: "#111827"
+  adaptive_icon_foreground: "assets/images/task_logo.png"
+
+  web:
+    generate: true
+    image_path: "assets/images/task_logo.png"
+    background_color: "#111827"
+    theme_color: "#F59E0B"
